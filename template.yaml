@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: GenAI Job Search Agent - scans job boards for GenAI security roles
 
+# Variables on Global scale!
 Globals:
   Function:
     Timeout: 120
@@ -25,6 +26,18 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref JobsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:genai-job-agent/*'
+      Events:
+        WeeklySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 13 ? * MON *)
+            Description: Run job scraper every Monday at 8AM EST
+            Enabled: true
 
   # DynamoDB table - job listings
   JobsTable:

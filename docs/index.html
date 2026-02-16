@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenAI Job Search Agent — Chris's Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090c;
+    --surface: #0f1117;
+    --surface-2: #161923;
+    --border: #1e2230;
+    --border-accent: #2a3045;
+    --text: #c8cdd8;
+    --text-dim: #6b7280;
+    --text-bright: #e8ecf4;
+    --accent: #f59e0b;
+    --accent-dim: rgba(245, 158, 11, 0.12);
+    --blue: #38bdf8;
+    --blue-dim: rgba(56, 189, 248, 0.1);
+    --green: #4ade80;
+    --green-dim: rgba(74, 222, 128, 0.1);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.1);
+    --red: #f87171;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Hero */
+  .hero {
+    padding: 80px 0 60px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 300px;
+    background: radial-gradient(ellipse, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 6px 14px;
+    border-radius: 4px;
+    margin-bottom: 24px;
+    animation: fadeIn 0.6s ease both;
+  }
+
+  h1 {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -1px;
+    line-height: 1.15;
+    margin-bottom: 16px;
+    animation: fadeIn 0.6s 0.1s ease both;
+  }
+
+  .subtitle {
+    font-size: 18px;
+    color: var(--text-dim);
+    font-weight: 300;
+    max-width: 600px;
+    animation: fadeIn 0.6s 0.2s ease both;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 32px;
+    animation: fadeIn 0.6s 0.3s ease both;
+  }
+
+  .meta-item {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .meta-item span { color: var(--accent); }
+
+  /* Section */
+  section {
+    padding: 60px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h2 {
+    font-size: 13px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: var(--accent);
+    margin-bottom: 32px;
+  }
+
+  h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 12px;
+  }
+
+  p {
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+    max-width: 680px;
+  }
+
+  p + p { margin-top: 12px; }
+
+  /* Architecture diagram */
+  .arch-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .arch-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .arch-box {
+    padding: 14px 20px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 170px;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .arch-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  .arch-box .arch-sub {
+    font-size: 10px;
+    font-weight: 400;
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+
+  .arch-trigger { background: var(--surface-2); border: 1.5px solid var(--accent); color: var(--accent); }
+  .arch-compute { background: var(--surface-2); border: 1.5px solid #f97316; color: #f97316; }
+  .arch-data { background: var(--surface-2); border: 1.5px solid var(--blue); color: var(--blue); }
+  .arch-external { background: var(--surface-2); border: 1.5px solid var(--purple); color: var(--purple); }
+  .arch-future { background: var(--surface-2); border: 1.5px dashed #333; color: #555; }
+
+  .arch-arrow { color: #333; font-size: 18px; font-family: var(--mono); }
+  .arch-arrow-down { display: flex; justify-content: center; color: #333; font-size: 18px; font-family: var(--mono); }
+
+  .arch-phase {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #333;
+    text-align: center;
+    margin: 16px 0 8px;
+  }
+
+  .arch-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .arch-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .arch-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+  }
+
+  /* Tech stack */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .tech-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    transition: border-color 0.2s ease;
+  }
+
+  .tech-card:hover { border-color: var(--border-accent); }
+
+  .tech-card-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 8px;
+  }
+
+  .tech-card-title.compute { color: #f97316; }
+  .tech-card-title.data { color: var(--blue); }
+  .tech-card-title.security { color: var(--green); }
+  .tech-card-title.ai { color: var(--purple); }
+
+  .tech-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* Security decisions */
+  .decision-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .decision {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    border-left: 3px solid var(--green);
+  }
+
+  .decision-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .decision-text {
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .decision-text strong {
+    color: var(--text-bright);
+    font-weight: 600;
+  }
+
+  /* Cost table */
+  .cost-table {
+    width: 100%;
+    max-width: 500px;
+    margin-top: 24px;
+    border-collapse: collapse;
+  }
+
+  .cost-table th, .cost-table td {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cost-table th {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  .cost-table td { color: var(--text); }
+  .cost-table td:last-child { font-family: var(--mono); color: var(--green); }
+
+  .cost-total td {
+    border-top: 2px solid var(--border-accent);
+    font-weight: 600;
+    color: var(--text-bright) !important;
+  }
+
+  /* Profile section */
+  .profile-bar {
+    display: flex;
+    gap: 32px;
+    margin-top: 24px;
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .profile-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .profile-stat-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .profile-stat-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* Footer */
+  .footer {
+    padding: 40px 0;
+    text-align: center;
+  }
+
+  .footer p {
+    font-size: 13px;
+    color: var(--text-dim);
+    max-width: none;
+  }
+
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .footer a:hover { text-decoration: underline; }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    h1 { font-size: 28px; }
+    .hero-meta { flex-wrap: wrap; gap: 12px; }
+    .arch-row { flex-wrap: wrap; }
+    .arch-box { min-width: 140px; font-size: 12px; }
+    .profile-bar { flex-wrap: wrap; gap: 20px; }
+    .tech-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="tag">Portfolio Project</div>
+    <h1>GenAI Job Search Agent</h1>
+    <p class="subtitle">A serverless AWS pipeline that scrapes job boards, scores listings with Bedrock AI, and delivers personalized alerts — built with security-first architecture.</p>
+    <div class="hero-meta">
+      <div class="meta-item"><span>→</span> AWS Serverless</div>
+      <div class="meta-item"><span>→</span> Python 3.12</div>
+      <div class="meta-item"><span>→</span> Bedrock / Claude</div>
+      <div class="meta-item"><span>→</span> &lt; $15/mo</div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <section>
+    <h2>Overview</h2>
+    <p>Built to solve a real problem: monitoring dozens of job boards for highly specific GenAI security roles in financial services across Florida. Rather than manually searching weekly, this agent runs autonomously every Monday — scraping listings, filtering by keyword relevance, scoring with AI, and delivering a prioritized digest.</p>
+    <p>The system supports multiple user profiles with independent search criteria, keyword tiers, and geographic preferences. Each profile gets personalized scoring and notifications. Designed for a family of users with completely different job search parameters.</p>
+  </section>
+
+  <!-- Architecture -->
+  <section>
+    <h2>Architecture</h2>
+
+    <div class="arch-grid">
+      <div class="arch-phase">Scheduling</div>
+      <div class="arch-row">
+        <div class="arch-box arch-trigger">☁️ EventBridge<div class="arch-sub">cron: Mondays 8AM EST</div></div>
+      </div>
+      <div class="arch-arrow-down">↓</div>
+
+      <div class="arch-phase">Scrape → Filter → Store</div>
+      <div class="arch-row">
+        <div class="arch-box arch-external">🔍 SerpAPI<div class="arch-sub">Google Jobs</div></div>
+        <span class="arch-arrow">→</span>
+        <div class="arch-box arch-compute">λ Scraper<div class="arch-sub">profile-based filter + dedup</div></div>
+        <span class="arch-arrow">→</span>
+        <div class="arch-box arch-data">📦 DynamoDB<div class="arch-sub">single-table design</div></div>
+      </div>
+
+      <div class="arch-phase">Intelligence Layer</div>
+      <div class="arch-row">
+        <div class="arch-box arch-data">📦 DynamoDB<div class="arch-sub">STATUS#new → GSI query</div></div>
+        <span class="arch-arrow">→</span>
+        <div class="arch-box arch-future">λ Bedrock Scorer<div class="arch-sub">Claude Sonnet</div></div>
+        <span class="arch-arrow">→</span>
+        <div class="arch-box arch-future">📧 SNS<div class="arch-sub">email + SMS alerts</div></div>
+      </div>
+    </div>
+
+    <div class="arch-legend">
+      <div class="arch-legend-item"><div class="arch-legend-dot" style="background:var(--accent)"></div>Trigger</div>
+      <div class="arch-legend-item"><div class="arch-legend-dot" style="background:#f97316"></div>Compute</div>
+      <div class="arch-legend-item"><div class="arch-legend-dot" style="background:var(--blue)"></div>Data</div>
+      <div class="arch-legend-item"><div class="arch-legend-dot" style="background:var(--purple)"></div>External</div>
+      <div class="arch-legend-item"><div class="arch-legend-dot" style="border:1.5px dashed #555;background:transparent"></div>In Progress</div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section>
+    <h2>Tech Stack</h2>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="tech-card-title compute">Compute</div>
+        <p>AWS Lambda (Python 3.12) with SAM for infrastructure as code. EventBridge for cron scheduling. Deployed via CloudFormation.</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-title data">Data</div>
+        <p>DynamoDB single-table design with GSI for status-based queries. TTL for automatic 90-day cleanup. PAY_PER_REQUEST billing.</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-title security">Security</div>
+        <p>API keys in Secrets Manager. IAM least-privilege per Lambda. DynamoDB encryption at rest. No secrets in environment variables.</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-title ai">AI / ML</div>
+        <p>Amazon Bedrock with Claude Sonnet for intelligent job scoring. Structured JSON output. Cost-capped at $5/month for Bedrock calls.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DynamoDB Design -->
+  <section>
+    <h2>DynamoDB Design</h2>
+    <h3>Single-Table, Multiple Entity Types</h3>
+    <p>Profiles, job listings, and configuration all live in one table — differentiated by key structure following DynamoDB best practices. This eliminates cross-table joins and simplifies IAM permissions.</p>
+
+    <div class="tech-grid" style="margin-top:20px">
+      <div class="tech-card">
+        <div class="tech-card-title data">Primary Keys</div>
+        <p><strong style="color:var(--text-bright)">PK:</strong> SOURCE#google_jobs | PROFILE#chris<br>
+        <strong style="color:var(--text-bright)">SK:</strong> JOB#abc123 | CONFIG<br>
+        Enables direct lookups and source-based queries.</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-title data">GSI1 — Status Index</div>
+        <p><strong style="color:var(--text-bright)">GSI1PK:</strong> STATUS#new | STATUS#scored<br>
+        <strong style="color:var(--text-bright)">GSI1SK:</strong> DATE#2026-02-15<br>
+        Powers the scorer Lambda: "get all new listings, newest first."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section>
+    <h2>Security Decisions</h2>
+    <div class="decision-list">
+      <div class="decision">
+        <div class="decision-icon">🔐</div>
+        <div class="decision-text"><strong>Secrets Manager over environment variables.</strong> API keys are retrieved at runtime via boto3, never stored in Lambda configuration. Supports rotation without redeployment.</div>
+      </div>
+      <div class="decision">
+        <div class="decision-icon">🛡️</div>
+        <div class="decision-text"><strong>Least-privilege IAM.</strong> Each Lambda gets its own role scoped to only the resources it needs. Scraper can read/write DynamoDB and read Secrets Manager — nothing else.</div>
+      </div>
+      <div class="decision">
+        <div class="decision-icon">🔒</div>
+        <div class="decision-text"><strong>DynamoDB encryption at rest.</strong> AWS-managed keys (SSE-S3) enabled by default. All data encrypted transparently.</div>
+      </div>
+      <div class="decision">
+        <div class="decision-icon">🧹</div>
+        <div class="decision-text"><strong>TTL-based data lifecycle.</strong> Job listings auto-expire after 90 days. No manual cleanup needed, no stale data accumulation.</div>
+      </div>
+      <div class="decision">
+        <div class="decision-icon">📋</div>
+        <div class="decision-text"><strong>Structured JSON logging.</strong> All Lambda output uses JSON format for CloudWatch integration. Enables metric filters and correlation across the pipeline.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Keyword Filtering -->
+  <section>
+    <h2>Intelligent Filtering</h2>
+    <h3>Three-Tier Keyword Scoring</h3>
+    <p>Before listings ever reach Bedrock (which costs money per call), a pre-filter scores them based on keyword relevance. This reduces Bedrock API costs by 60-70% by eliminating clearly irrelevant listings at the scrape stage.</p>
+
+    <div class="tech-grid" style="margin-top:20px">
+      <div class="tech-card">
+        <div class="tech-card-title" style="color:var(--accent)">Tier 1 — Must Match (10pts each)</div>
+        <p>Core role keywords: generative AI, GenAI, LLM, AI security, Bedrock, AI governance. Must match ≥2 or listing is discarded.</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-title" style="color:var(--blue)">Tier 2 — Boost (5pts each)</div>
+        <p>Industry & seniority: financial services, banking, security architect, principal. Increases score but not required.</p>
+      </div>
+      <div class="tech-card">
+        <div class="tech-card-title" style="color:var(--green)">Geographic Match (15pts)</div>
+        <p>Target locations: Miami-Dade, Broward, Palm Beach, Brevard County, Space Coast, or Remote.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cost -->
+  <section>
+    <h2>Cost Optimization</h2>
+    <p>Designed to run under $15/month at full capacity. Every architectural decision considers cost impact.</p>
+
+    <table class="cost-table">
+      <thead>
+        <tr><th>Service</th><th>Usage</th><th>Monthly</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Lambda</td><td>~20 invocations/month</td><td>$0.00</td></tr>
+        <tr><td>DynamoDB</td><td>PAY_PER_REQUEST, ~500 items</td><td>~$0.50</td></tr>
+        <tr><td>SerpAPI</td><td>Free tier, 100 searches/month</td><td>$0.00</td></tr>
+        <tr><td>Bedrock</td><td>~200 listings scored/month</td><td>~$3.00</td></tr>
+        <tr><td>SNS</td><td>Weekly digest + SMS alerts</td><td>~$0.50</td></tr>
+        <tr><td>Secrets Manager</td><td>1 secret, ~80 reads/month</td><td>~$0.40</td></tr>
+        <tr class="cost-total"><td><strong>Total</strong></td><td></td><td>~$4.40</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Multi-Profile -->
+  <section>
+    <h2>Multi-Profile Support</h2>
+    <p>The agent supports multiple independent user profiles, each with their own search queries, keyword tiers, geographic preferences, and exclusion rules. Profiles are stored as DynamoDB items alongside job listings — same table, different key structure.</p>
+
+    <div class="profile-bar">
+      <div class="profile-stat">
+        <div class="profile-stat-value">16</div>
+        <div class="profile-stat-label">searches per profile run</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-value">~65%</div>
+        <div class="profile-stat-label">filtered before Bedrock</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-value">90d</div>
+        <div class="profile-stat-label">auto-expire via TTL</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-value">∞</div>
+        <div class="profile-stat-label">profiles supported</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Me -->
+  <section>
+    <h2>About the Builder</h2>
+    <h3>Chris — Security Architect</h3>
+    <p>30 years in cybersecurity, currently specializing in generative AI application security and production approval in financial services. AWS Solutions Architecture certified. This project demonstrates hands-on Bedrock experience combined with security-first serverless design.</p>
+    <div class="hero-meta" style="margin-top:20px">
+      <div class="meta-item"><span>→</span> GenAI Security</div>
+      <div class="meta-item"><span>→</span> AWS Certified SA</div>
+      <div class="meta-item"><span>→</span> Financial Services</div>
+      <div class="meta-item"><span>→</span> 30yr Cybersecurity</div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>Built with AWS SAM · Lambda · DynamoDB · Bedrock · Python 3.12</p>
+    <p style="margin-top:8px"><a href="https://github.com/YOUR_USERNAME/genai-job-agent">View Source on GitHub</a></p>
+  </div>
+
+</div>
+
+</body>
+</html>
