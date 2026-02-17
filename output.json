@@ -1,1 +1,1 @@
-{"statusCode": 200, "body": "{\"chris\": {\"searched\": 16, \"new\": 11, \"skipped\": 6, \"filtered\": 30}}"}
+{"statusCode": 200, "body": "{\"total\": 2, \"scored\": 1, \"errors\": 1}"}

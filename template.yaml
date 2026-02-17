@@ -38,7 +38,26 @@ Resources:
             Schedule: cron(0 13 ? * MON *)
             Description: Run job scraper every Monday at 8AM EST
             Enabled: true
-
+  ScorerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: scorer/
+      Handler: app.lambda_handler
+      MemorySize: 256
+      Timeout: 300
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+                - aws-marketplace:Subscribe
+                - aws-marketplace:ViewSubscriptions
+              Resource: '*'
   # DynamoDB table - job listings
   JobsTable:
     Type: AWS::DynamoDB::Table
@@ -79,3 +98,6 @@ Outputs:
   JobsTable:
     Description: DynamoDB Table Name
     Value: !Ref JobsTable
+  ScorerFunction:
+    Description: Scorer Lambda Function ARN
+    Value: !GetAtt ScorerFunction.Arn
