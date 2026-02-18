@@ -15,6 +15,13 @@ profiles = [
             'AI security architect AWS',
             'LLM security engineer',
         ],
+        'target_companies': [
+            'JPMorgan', 'Citi', 'Bank of America', 'Wells Fargo',
+            'Goldman Sachs', 'Morgan Stanley', 'Fidelity',
+            'Charles Schwab', 'Raymond James', 'L3Harris',
+            'Lockheed Martin', 'Northrop Grumman',
+            'Vanguard', 'BlackRock', 'State Street',    
+        ],
         'search_locations': [
             'Miami, FL',
             'Fort Lauderdale, FL',
