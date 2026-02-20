@@ -2,7 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: GenAI Job Search Agent - scans job boards for GenAI security roles
 
-# Variables on Global scale!
 Globals:
   Function:
     Timeout: 120
@@ -12,8 +11,14 @@ Globals:
     LoggingConfig:
       LogFormat: JSON
 
+Parameters:
+  NotificationEmail:
+    Type: String
+    Default: chrisadams27@gmail.com
+    Description: Email for weekly digest
+
 Resources:
-  # Lambda function - job scraper
+  # Lambda - job scraper
   ScraperFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -38,6 +43,8 @@ Resources:
             Schedule: cron(0 13 ? * MON *)
             Description: Run job scraper every Monday at 8AM EST
             Enabled: true
+
+  # Lambda - Bedrock scorer
   ScorerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -58,7 +65,56 @@ Resources:
                 - aws-marketplace:Subscribe
                 - aws-marketplace:ViewSubscriptions
               Resource: '*'
-  # DynamoDB table - job listings
+
+  # Lambda - notifier
+  NotifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: notifier/
+      Handler: app.lambda_handler
+      MemorySize: 256
+      Environment:
+        Variables:
+          JOBS_TABLE: !Ref JobsTable
+          DIGEST_TOPIC: !Ref DigestTopic
+          ALERT_TOPIC: !Ref AlertTopic
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt DigestTopic.TopicName
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt AlertTopic.TopicName
+
+  # SNS - weekly email digest
+  DigestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: genai-job-agent-digest
+      DisplayName: Job Agent Weekly Digest
+
+  DigestSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref DigestTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+  # SNS - high-priority SMS + email alerts
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: genai-job-agent-alerts
+      DisplayName: Job Agent Alert
+
+  AlertEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: email
+      Endpoint: !Ref NotificationEmail
+
+  # DynamoDB table
   JobsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -95,9 +151,18 @@ Outputs:
   ScraperFunction:
     Description: Scraper Lambda Function ARN
     Value: !GetAtt ScraperFunction.Arn
-  JobsTable:
-    Description: DynamoDB Table Name
-    Value: !Ref JobsTable
   ScorerFunction:
     Description: Scorer Lambda Function ARN
     Value: !GetAtt ScorerFunction.Arn
+  NotifierFunction:
+    Description: Notifier Lambda Function ARN
+    Value: !GetAtt NotifierFunction.Arn
+  JobsTable:
+    Description: DynamoDB Table Name
+    Value: !Ref JobsTable
+  DigestTopic:
+    Description: Weekly Digest SNS Topic ARN
+    Value: !Ref DigestTopic
+  AlertTopic:
+    Description: High-Priority Alert SNS Topic ARN
+    Value: !Ref AlertTopic
