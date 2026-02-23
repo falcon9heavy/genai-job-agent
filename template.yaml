@@ -65,6 +65,13 @@ Resources:
                 - aws-marketplace:Subscribe
                 - aws-marketplace:ViewSubscriptions
               Resource: '*'
+      Events:
+        ScorerSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(30 13 ? * MON *)
+            Description: Score new listings 30min after scraper
+            Enabled: true
 
   # Lambda - notifier
   NotifierFunction:
@@ -85,6 +92,13 @@ Resources:
             TopicName: !GetAtt DigestTopic.TopicName
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt AlertTopic.TopicName
+      Events:
+        NotifierSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 14 ? * MON *)
+            Description: Send notifications 1hr after scraper
+            Enabled: true
 
   # SNS - weekly email digest
   DigestTopic:
