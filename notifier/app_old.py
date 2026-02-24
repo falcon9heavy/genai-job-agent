@@ -25,45 +25,13 @@ def get_scored_listings():
     return response['Items']
 
 
-def format_apply_links(listing):
-    """Format apply links for display in email.
-
-    Shows the primary apply link prominently, then lists any
-    additional apply options (e.g. LinkedIn, Indeed, Dice).
-    """
-    apply_url = listing.get('apply_url', '')
-    apply_source = listing.get('apply_source', '')
-    apply_options = listing.get('apply_options', [])
-
-    lines = []
-
-    if apply_url:
-        label = f"Apply on {apply_source}" if apply_source else "Apply"
-        lines.append(f"    ➤ {label}: {apply_url}")
-
-        # Show additional apply options if available
-        if len(apply_options) > 1:
-            lines.append(f"    Also on:")
-            for opt in apply_options[1:]:
-                source = opt.get('source', 'Unknown')
-                url = opt.get('url', '')
-                if url:
-                    lines.append(f"      • {source}: {url}")
-    else:
-        # Fallback to old 'url' field for listings scraped before this update
-        url = listing.get('url', '')
-        if url:
-            lines.append(f"    ➤ View: {url}")
-
-    return "\n".join(lines)
-
-
 def format_listing(listing):
     score = listing.get('bedrock_score', 0)
     title = listing.get('title', 'Unknown')
     company = listing.get('company', 'Unknown')
     location = listing.get('location', 'Unknown')
     summary = listing.get('summary', 'No summary available.')
+    url = listing.get('url', '')
     details = listing.get('score_details', {})
 
     lines = [
@@ -77,10 +45,8 @@ def format_listing(listing):
 
     lines.append(f"    Summary:   {summary}")
 
-    # Apply links section
-    apply_links = format_apply_links(listing)
-    if apply_links:
-        lines.append(apply_links)
+    if url:
+        lines.append(f"    Link:      {url}")
 
     lines.append("")
     lines.append("─" * 60)
@@ -141,32 +107,10 @@ def send_alerts(listings):
         title = listing.get('title', 'Unknown')
         company = listing.get('company', 'Unknown')
         location = listing.get('location', '')
-        apply_url = listing.get('apply_url', listing.get('url', ''))
-        apply_source = listing.get('apply_source', '')
 
         message = f"🔥 HOT MATCH ({score}/100): {title} at {company}"
         if location:
             message += f" [{location}]"
-
-        message += "\n"
-
-        if apply_url:
-            label = f"Apply on {apply_source}" if apply_source else "Apply"
-            message += f"\n➤ {label}: {apply_url}"
-
-            # Include additional apply options
-            apply_options = listing.get('apply_options', [])
-            if len(apply_options) > 1:
-                message += "\n\nAlso available on:"
-                for opt in apply_options[1:]:
-                    source = opt.get('source', 'Unknown')
-                    url = opt.get('url', '')
-                    if url:
-                        message += f"\n  • {source}: {url}"
-
-        summary = listing.get('summary', '')
-        if summary:
-            message += f"\n\nSummary: {summary}"
 
         sns.publish(
             TopicArn=ALERT_TOPIC,

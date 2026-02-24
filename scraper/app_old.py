@@ -47,44 +47,8 @@ def job_exists(source, job_id):
     return 'Item' in response
 
 
-def extract_apply_links(job_data):
-    """Extract apply URLs from SerpAPI response.
-
-    SerpAPI Google Jobs returns apply links in 'apply_options', each with:
-      - title: the job board name (e.g. 'LinkedIn', 'Indeed', 'Dice')
-      - link: the direct apply URL
-
-    Falls back to 'related_links' if apply_options is not present.
-    Returns a tuple of (apply_url, apply_source, all_apply_options).
-    """
-    apply_options = job_data.get('apply_options', [])
-
-    if apply_options:
-        # Primary: first apply option link
-        primary = apply_options[0]
-        apply_url = primary.get('link', '')
-        apply_source = primary.get('title', '')
-        # Store all options so the user can pick their preferred board
-        all_options = [
-            {'source': opt.get('title', ''), 'url': opt.get('link', '')}
-            for opt in apply_options
-        ]
-        return apply_url, apply_source, all_options
-
-    # Fallback: related_links (less reliable)
-    related = job_data.get('related_links', [])
-    if related:
-        return related[0].get('link', ''), 'Google', []
-
-    return '', '', []
-
-
 def write_job(source, job_id, job_data, profile_name, raw_score, matched_keywords):
     now = datetime.now()
-
-    # Extract apply links
-    apply_url, apply_source, all_apply_options = extract_apply_links(job_data)
-
     item = {
         'PK': f'SOURCE#{source}',
         'SK': f'JOB#{job_id}',
@@ -95,10 +59,7 @@ def write_job(source, job_id, job_data, profile_name, raw_score, matched_keyword
         'company': job_data.get('company_name', ''),
         'location': job_data.get('location', ''),
         'description': job_data.get('description', '')[:5000],
-        'via': job_data.get('via', ''),
-        'apply_url': apply_url,
-        'apply_source': apply_source,
-        'apply_options': all_apply_options,
+        'url': job_data.get('related_links', [{}])[0].get('link', ''),
         'raw_score': raw_score,
         'keywords_matched': matched_keywords,
         'first_seen': now.isoformat(),
@@ -107,7 +68,6 @@ def write_job(source, job_id, job_data, profile_name, raw_score, matched_keyword
     }
     table.put_item(Item=item)
     return item
-
 
 def score_listing(job_data, profile):
     text = f"{job_data.get('title', '')} {job_data.get('description', '')} {job_data.get('location', '')}".lower()
@@ -151,7 +111,6 @@ def score_listing(job_data, profile):
     raw_score = (tier1_count * 10) + (tier2_count * 5) + (15 if (geo_in_location or is_remote) else 0)
     return raw_score, matched
 
-
 def lambda_handler(event, context):
     api_key = get_serpapi_key()
     profiles = get_active_profiles()
@@ -192,10 +151,9 @@ def lambda_handler(event, context):
                         continue
 
                     raw_score, matched = result
-                    item = write_job('google_jobs', job_id, job, name, raw_score, matched)
+                    write_job('google_jobs', job_id, job, name, raw_score, matched)
                     stats['new'] += 1
-                    apply_info = f" | Apply: {item.get('apply_source', 'N/A')}" if item.get('apply_url') else ''
-                    print(f"    NEW ({raw_score}pts): {job.get('title')} at {job.get('company_name')} | {matched}{apply_info}")
+                    print(f"    NEW ({raw_score}pts): {job.get('title')} at {job.get('company_name')} | {matched}")
 
         all_stats[name] = stats
         print(f"  Stats: {stats}")
