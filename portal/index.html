@@ -1,26 +1,362 @@
-<html>
-    <head>
-        <title>My First Webpage</title>
-    </head>
-    <body>
-        <h1>I love coffee</h1>
-        <p>Hello world!</p>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Agent Profile Builder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0f0f1a; font-family: 'DM Sans', sans-serif; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1a2e; }
+    ::-webkit-scrollbar-thumb { background: #e94560; border-radius: 3px; }
+    input::placeholder { color: #555; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
 
-    <img src="coffee.jpg" width=500/>
+    const PRESET_LOCATIONS = [
+      "Miami, FL", "Fort Lauderdale, FL", "Boca Raton, FL", "West Palm Beach, FL",
+      "Melbourne, FL", "Orlando, FL", "Tampa, FL", "Jacksonville, FL",
+      "New York, NY", "Washington, DC", "Atlanta, GA", "Charlotte, NC",
+      "Chicago, IL", "Austin, TX", "Dallas, TX", "Denver, CO",
+      "Los Angeles, CA", "San Francisco, CA", "Seattle, WA", "Boston, MA", "Remote"
+    ];
 
-    <!-- CORS demo -->
-    <div id="tofetch"/>
-    <script>
-        var tofetch = document.getElementById("tofetch");
+    const SUGGESTED_ROLES = [
+      "software engineer", "security architect", "data analyst", "project manager",
+      "marketing manager", "product manager", "business analyst", "UX designer",
+      "financial analyst", "teacher", "museum curator", "research assistant",
+      "social media manager", "content writer", "graphic designer", "accountant",
+      "nurse", "sales representative", "operations manager", "human resources"
+    ];
 
-        fetch('extra-page.html')
-        .then((response) => { 
-            return response.text();
-        })
-        .then((html) => {
-            tofetch.innerHTML = html     
-        });
-    </script>
+    function TagInput({ tags, setTags, placeholder, suggestions }) {
+      const [input, setInput] = useState("");
+      const [showSuggestions, setShowSuggestions] = useState(false);
+
+      const filtered = (suggestions || []).filter(s =>
+        s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s)
+      );
+
+      const addTag = (tag) => {
+        const trimmed = tag.trim();
+        if (trimmed && !tags.includes(trimmed)) setTags([...tags, trimmed]);
+        setInput("");
+        setShowSuggestions(false);
+      };
+
+      const removeTag = (idx) => setTags(tags.filter((_, i) => i !== idx));
+
+      return (
+        <div style={{ position: "relative" }}>
+          <div style={{
+            display: "flex", flexWrap: "wrap", gap: "6px", padding: "10px",
+            background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "8px",
+            minHeight: "44px", alignItems: "center"
+          }}>
+            {tags.map((tag, i) => (
+              <span key={i} style={{
+                background: "linear-gradient(135deg, #e94560, #c23152)",
+                color: "#fff", padding: "4px 10px", borderRadius: "14px",
+                fontSize: "13px", display: "flex", alignItems: "center", gap: "6px",
+                animation: "fadeIn 0.2s ease"
+              }}>
+                {tag}
+                <span onClick={() => removeTag(i)} style={{
+                  cursor: "pointer", opacity: 0.7, fontWeight: "bold", fontSize: "14px", lineHeight: 1
+                }}>×</span>
+              </span>
+            ))}
+            <input
+              value={input}
+              onChange={e => { setInput(e.target.value); setShowSuggestions(true); }}
+              onKeyDown={e => { if (e.key === "Enter" && input.trim()) { e.preventDefault(); addTag(input); }}}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              placeholder={tags.length === 0 ? placeholder : "Add more..."}
+              style={{
+                background: "transparent", border: "none", outline: "none",
+                color: "#e0e0e0", fontSize: "14px", fontFamily: "'DM Sans', sans-serif",
+                flex: 1, minWidth: "120px"
+              }}
+            />
+          </div>
+          {showSuggestions && input.length > 0 && filtered.length > 0 && (
+            <div style={{
+              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+              background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "8px",
+              marginTop: "4px", maxHeight: "180px", overflowY: "auto",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.4)"
+            }}>
+              {filtered.slice(0, 8).map((s, i) => (
+                <div key={i} onMouseDown={() => addTag(s)} style={{
+                  padding: "8px 14px", cursor: "pointer", fontSize: "13px",
+                  color: "#c0c0c0", borderBottom: "1px solid #2a2a4a"
+                }}
+                onMouseEnter={e => e.target.style.background = "#2a2a4a"}
+                onMouseLeave={e => e.target.style.background = "transparent"}
+                >{s}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Toggle({ value, onChange, label }) {
+      return (
+        <label style={{
+          display: "flex", alignItems: "center", gap: "10px",
+          color: "#c0c0c0", fontSize: "14px", cursor: "pointer"
+        }}>
+          <div onClick={() => onChange(!value)} style={{
+            width: "40px", height: "22px", borderRadius: "11px",
+            background: value ? "linear-gradient(135deg, #e94560, #c23152)" : "#2a2a4a",
+            position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0
+          }}>
+            <div style={{
+              width: "18px", height: "18px", borderRadius: "50%",
+              background: "#fff", position: "absolute", top: "2px",
+              left: value ? "20px" : "2px", transition: "left 0.2s",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.3)"
+            }} />
+          </div>
+          {label}
+        </label>
+      );
+    }
+
+    function Section({ number, title, subtitle, children }) {
+      return (
+        <div style={{
+          background: "linear-gradient(145deg, #16162a, #1a1a32)",
+          border: "1px solid #2a2a4a", borderRadius: "12px",
+          padding: "24px", marginBottom: "16px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.2)"
+        }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "6px" }}>
+            <span style={{
+              background: "linear-gradient(135deg, #e94560, #c23152)",
+              color: "#fff", width: "28px", height: "28px", borderRadius: "50%",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              fontSize: "13px", fontWeight: "bold", flexShrink: 0
+            }}>{number}</span>
+            <h3 style={{
+              margin: 0, color: "#f0f0f0",
+              fontFamily: "'Playfair Display', serif", fontSize: "20px", fontWeight: 600
+            }}>{title}</h3>
+          </div>
+          {subtitle && <p style={{
+            margin: "0 0 16px 40px", color: "#888", fontSize: "13px"
+          }}>{subtitle}</p>}
+          <div>{children}</div>
+        </div>
+      );
+    }
+
+    function ProfileBuilder() {
+      const [name, setName] = useState("");
+      const [searchQueries, setSearchQueries] = useState([]);
+      const [locations, setLocations] = useState([]);
+      const [tier1Keywords, setTier1Keywords] = useState([]);
+      const [tier2Keywords, setTier2Keywords] = useState([]);
+      const [exclusions, setExclusions] = useState(["junior", "entry-level", "intern"]);
+      const [companies, setCompanies] = useState([]);
+      const [requireGeo, setRequireGeo] = useState(true);
+      const [active, setActive] = useState(true);
+      const [saved, setSaved] = useState(false);
+      const [loading, setLoading] = useState(false);
+
+      const handleSave = () => {
+        if (!name.trim()) return;
+        setLoading(true);
+        const profile = {
+          name: name.toLowerCase().trim(),
+          search_queries: searchQueries,
+          search_locations: locations,
+          target_companies: companies,
+          tier1_keywords: tier1Keywords,
+          tier2_keywords: tier2Keywords,
+          exclusions,
+          require_geo_match: requireGeo,
+          active,
+          tier1_minimum: 1,
+        };
+        console.log("Profile payload:", JSON.stringify(profile, null, 2));
+        // TODO: POST to API Gateway endpoint
+        // fetch(API_URL + '/profile', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(profile) })
+        setTimeout(() => { setLoading(false); setSaved(true); setTimeout(() => setSaved(false), 3000); }, 800);
+      };
+
+      const completeness = [
+        name.trim().length > 0,
+        searchQueries.length > 0,
+        locations.length > 0,
+        tier1Keywords.length > 0,
+      ].filter(Boolean).length;
+
+      return (
+        <div style={{
+          minHeight: "100vh",
+          background: "linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%)"
+        }}>
+          {/* Header */}
+          <div style={{
+            background: "linear-gradient(135deg, #0f0f1a 0%, #1a0a1a 100%)",
+            borderBottom: "1px solid #2a2a4a",
+            padding: "32px 24px 28px", textAlign: "center",
+            position: "sticky", top: 0, zIndex: 100
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "6px" }}>
+              <span style={{ fontSize: "24px" }}>🚀</span>
+              <h1 style={{
+                margin: 0, color: "#f0f0f0",
+                fontFamily: "'Playfair Display', serif",
+                fontSize: "28px", fontWeight: 700, letterSpacing: "-0.5px"
+              }}>Job Agent Profile Builder</h1>
+            </div>
+            <p style={{ margin: 0, color: "#888", fontSize: "14px" }}>
+              Tell us what you're looking for and we'll find it for you
+            </p>
+            <div style={{
+              maxWidth: "400px", margin: "16px auto 0",
+              display: "flex", gap: "4px", alignItems: "center"
+            }}>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} style={{
+                  flex: 1, height: "3px", borderRadius: "2px",
+                  background: i < completeness ? "linear-gradient(90deg, #e94560, #c23152)" : "#2a2a4a",
+                  transition: "background 0.3s"
+                }} />
+              ))}
+              <span style={{ fontSize: "11px", color: "#888", marginLeft: "8px" }}>{completeness}/4</span>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div style={{ maxWidth: "640px", margin: "0 auto", padding: "24px 16px 120px" }}>
+
+            <Section number="1" title="Who are you?" subtitle="Your first name — this becomes your unique profile">
+              <input
+                value={name} onChange={e => setName(e.target.value)}
+                placeholder="Your first name"
+                style={{
+                  width: "100%", padding: "12px 14px",
+                  background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "8px",
+                  color: "#e0e0e0", fontSize: "16px", fontFamily: "'DM Sans', sans-serif", outline: "none"
+                }}
+              />
+            </Section>
+
+            <Section number="2" title="What roles are you looking for?" subtitle="Job titles you'd search for — type and press Enter">
+              <TagInput
+                tags={searchQueries} setTags={setSearchQueries}
+                placeholder='e.g. "museum curator", "research assistant"'
+                suggestions={SUGGESTED_ROLES}
+              />
+            </Section>
+
+            <Section number="3" title="Where do you want to work?" subtitle="Cities, states, or Remote">
+              <TagInput
+                tags={locations} setTags={setLocations}
+                placeholder="Type a city or pick from suggestions..."
+                suggestions={PRESET_LOCATIONS}
+              />
+            </Section>
+
+            <Section number="4" title="Must-have keywords" subtitle="Words that MUST appear in the job posting">
+              <TagInput
+                tags={tier1Keywords} setTags={setTier1Keywords}
+                placeholder='e.g. "history", "research", "coordinator"'
+              />
+            </Section>
+
+            <Section number="5" title="Nice-to-have keywords" subtitle="Bonus terms that boost a job's relevance score">
+              <TagInput
+                tags={tier2Keywords} setTags={setTier2Keywords}
+                placeholder='e.g. "museum", "archives", "nonprofit"'
+              />
+            </Section>
+
+            <Section number="6" title="Exclude these" subtitle="Filter out jobs containing these terms">
+              <TagInput
+                tags={exclusions} setTags={setExclusions}
+                placeholder='e.g. "senior", "director", "10 years"'
+              />
+            </Section>
+
+            <Section number="7" title="Dream companies" subtitle="Optional — any specific companies you'd love to work at?">
+              <TagInput
+                tags={companies} setTags={setCompanies}
+                placeholder='e.g. "Smithsonian", "National Geographic" (leave blank to search all)'
+              />
+            </Section>
+
+            <Section number="8" title="Settings">
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                <Toggle value={requireGeo} onChange={setRequireGeo} label="Only show jobs in my selected locations" />
+                <Toggle value={active} onChange={setActive} label="Activate profile (start searching immediately)" />
+              </div>
+            </Section>
+
+            {/* Preview */}
+            {completeness >= 3 && (
+              <div style={{
+                background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "12px",
+                padding: "20px", marginBottom: "16px"
+              }}>
+                <h4 style={{ color: "#e94560", fontFamily: "'Playfair Display', serif", margin: "0 0 12px", fontSize: "16px" }}>
+                  📋 Profile Preview
+                </h4>
+                <div style={{ color: "#aaa", fontSize: "13px", lineHeight: 1.8 }}>
+                  <div><strong style={{ color: "#ddd" }}>Profile:</strong> {name}</div>
+                  <div><strong style={{ color: "#ddd" }}>Searching for:</strong> {searchQueries.join(", ") || "—"}</div>
+                  <div><strong style={{ color: "#ddd" }}>In:</strong> {locations.join(", ") || "—"}</div>
+                  <div><strong style={{ color: "#ddd" }}>Must match:</strong> {tier1Keywords.join(", ") || "—"}</div>
+                  <div><strong style={{ color: "#ddd" }}>Bonus terms:</strong> {tier2Keywords.join(", ") || "—"}</div>
+                  <div><strong style={{ color: "#ddd" }}>Excluding:</strong> {exclusions.join(", ") || "—"}</div>
+                  {companies.length > 0 && <div><strong style={{ color: "#ddd" }}>Target companies:</strong> {companies.join(", ")}</div>}
+                  <div><strong style={{ color: "#ddd" }}>Geo-locked:</strong> {requireGeo ? "Yes" : "No"} | <strong style={{ color: "#ddd" }}>Active:</strong> {active ? "Yes" : "No"}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sticky save bar */}
+          <div style={{
+            position: "fixed", bottom: 0, left: 0, right: 0,
+            background: "linear-gradient(180deg, transparent, #0f0f1a 30%)",
+            padding: "24px", display: "flex", justifyContent: "center"
+          }}>
+            <button onClick={handleSave} disabled={completeness < 3 || loading} style={{
+              background: completeness >= 3 ? "linear-gradient(135deg, #e94560, #c23152)" : "#2a2a4a",
+              color: completeness >= 3 ? "#fff" : "#666",
+              border: "none", borderRadius: "12px",
+              padding: "14px 48px", fontSize: "16px", fontWeight: 600,
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: completeness >= 3 ? "pointer" : "not-allowed",
+              transition: "all 0.2s",
+              boxShadow: completeness >= 3 ? "0 4px 20px rgba(233,69,96,0.3)" : "none",
+              minWidth: "200px"
+            }}>
+              {loading ? "Saving..." : saved ? "✓ Profile Saved!" : "Save Profile"}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<ProfileBuilder />, document.getElementById("root"));
+  </script>
+</body>
 </html>
-
