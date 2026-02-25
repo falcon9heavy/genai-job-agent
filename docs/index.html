@@ -1,362 +1,805 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Job Agent Profile Builder</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #0f0f1a; font-family: 'DM Sans', sans-serif; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #1a1a2e; }
-    ::-webkit-scrollbar-thumb { background: #e94560; border-radius: 3px; }
-    input::placeholder { color: #555; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GenAI Job Search Agent — Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #08090c;
+    --surface: #0f1117;
+    --surface-2: #161923;
+    --border: #1e2230;
+    --border-accent: #2a3045;
+    --text: #c8cdd8;
+    --text-dim: #6b7280;
+    --text-bright: #e8ecf4;
+    --accent: #f59e0b;
+    --accent-dim: rgba(245, 158, 11, 0.12);
+    --blue: #38bdf8;
+    --blue-dim: rgba(56, 189, 248, 0.1);
+    --green: #4ade80;
+    --green-dim: rgba(74, 222, 128, 0.1);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.1);
+    --red: #f87171;
+    --orange: #f97316;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .hero {
+    padding: 80px 0 60px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 300px;
+    background: radial-gradient(ellipse, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: 44px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  .subtitle {
+    font-size: 17px;
+    color: var(--text-dim);
+    max-width: 680px;
+    line-height: 1.7;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 24px;
+    margin-top: 28px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .meta-item span {
+    color: var(--accent);
+    margin-right: 6px;
+  }
+
+  section {
+    padding: 60px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h2 {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--text-bright);
+    letter-spacing: -0.5px;
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 12px;
+    margin-top: 32px;
+  }
+
+  p {
+    max-width: 720px;
+    margin-bottom: 16px;
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  p:last-child { margin-bottom: 0; }
+
+  .arch-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 32px 0;
+  }
+
+  .arch-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .arch-box {
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 160px;
+    text-align: center;
+    border: 1px solid;
+  }
+
+  .arch-box .sub {
+    font-size: 10px;
+    font-weight: 400;
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+
+  .box-trigger { background: var(--accent-dim); border-color: rgba(245, 158, 11, 0.25); color: var(--accent); }
+  .box-compute { background: rgba(249, 115, 22, 0.1); border-color: rgba(249, 115, 22, 0.25); color: var(--orange); }
+  .box-data { background: var(--blue-dim); border-color: rgba(56, 189, 248, 0.2); color: var(--blue); }
+  .box-external { background: var(--purple-dim); border-color: rgba(167, 139, 250, 0.2); color: var(--purple); }
+  .box-notify { background: var(--green-dim); border-color: rgba(74, 222, 128, 0.2); color: var(--green); }
+  .box-future { border-style: dashed; border-color: #333; color: #555; background: transparent; }
+
+  .arrow { color: var(--text-dim); font-size: 18px; opacity: 0.4; }
+
+  .phase-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 24px 0 8px;
+    padding-left: 4px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .score-weight {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .score-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  .tech-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .tech-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .tech-card h4 {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+
+  .tech-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .prompt-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .prompt-feat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .prompt-feat .feat-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .cost-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 24px 0;
+  }
+
+  .cost-amount {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  .cost-detail { font-size: 13px; color: var(--text-dim); }
+
+  .decision-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .decision-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .decision-card h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+  }
+
+  .decision-card .challenge {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .decision-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0;
+    line-height: 1.6;
+  }
+
+  .company-section { margin: 24px 0; }
+
+  .company-category {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 16px 0 8px;
+  }
+
+  .company-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .company-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 14px;
+    border: 1px solid;
+  }
+
+  .company-tag.finance { background: var(--accent-dim); border-color: rgba(245, 158, 11, 0.2); color: var(--accent); }
+  .company-tag.aerospace { background: var(--blue-dim); border-color: rgba(56, 189, 248, 0.2); color: var(--blue); }
+  .company-tag.cyber { background: var(--purple-dim); border-color: rgba(167, 139, 250, 0.2); color: var(--purple); }
+
+  .notif-sample {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text-dim);
+    overflow-x: auto;
+  }
+
+  .notif-sample .hl { color: var(--accent); }
+  .notif-sample .score-hl { color: var(--green); font-weight: 700; }
+  .notif-sample .link-hl { color: var(--blue); }
+
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    padding: 20px 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+
+  .stat { text-align: center; }
+
+  .stat .num {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .stat .label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .about-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+
+  .about-card p {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .about-card p:last-child { margin-bottom: 0; }
+
+  .footer {
+    padding: 40px 0;
+    text-align: center;
+  }
+
+  .footer p {
+    font-size: 13px;
+    color: var(--text-dim);
+    max-width: none;
+  }
+
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 28px; }
+    .hero-meta { gap: 12px; }
+    .arch-row { flex-wrap: wrap; }
+    .arch-box { min-width: 130px; font-size: 11px; }
+    .stats-bar { gap: 20px; }
+    .tech-grid, .decision-grid, .prompt-features { grid-template-columns: 1fr; }
+    .score-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const { useState } = React;
 
-    const PRESET_LOCATIONS = [
-      "Miami, FL", "Fort Lauderdale, FL", "Boca Raton, FL", "West Palm Beach, FL",
-      "Melbourne, FL", "Orlando, FL", "Tampa, FL", "Jacksonville, FL",
-      "New York, NY", "Washington, DC", "Atlanta, GA", "Charlotte, NC",
-      "Chicago, IL", "Austin, TX", "Dallas, TX", "Denver, CO",
-      "Los Angeles, CA", "San Francisco, CA", "Seattle, WA", "Boston, MA", "Remote"
-    ];
+<div class="container">
 
-    const SUGGESTED_ROLES = [
-      "software engineer", "security architect", "data analyst", "project manager",
-      "marketing manager", "product manager", "business analyst", "UX designer",
-      "financial analyst", "teacher", "museum curator", "research assistant",
-      "social media manager", "content writer", "graphic designer", "accountant",
-      "nurse", "sales representative", "operations manager", "human resources"
-    ];
+  <div class="hero">
+    <div class="tag">AWS Serverless · Bedrock AI · Python</div>
+    <h1>GenAI Job Search Agent</h1>
+    <p class="subtitle">An autonomous serverless pipeline that scrapes job boards, applies geographic and keyword filtering, scores relevance with Bedrock AI using few-shot prompt engineering, captures apply links from multiple sources, and delivers prioritized email digests — designed for multi-user profiles with independent search configurations.</p>
+    <div class="hero-meta">
+      <div class="meta-item"><span>→</span> AWS SAM (IaC)</div>
+      <div class="meta-item"><span>→</span> 3 Lambda Functions</div>
+      <div class="meta-item"><span>→</span> DynamoDB Single-Table</div>
+      <div class="meta-item"><span>→</span> Bedrock Claude Sonnet</div>
+      <div class="meta-item"><span>→</span> ~$0.003 / listing scored</div>
+    </div>
+  </div>
 
-    function TagInput({ tags, setTags, placeholder, suggestions }) {
-      const [input, setInput] = useState("");
-      const [showSuggestions, setShowSuggestions] = useState(false);
+  <!-- How It Works -->
+  <section>
+    <h2>How It Works</h2>
+    <p>Three Lambda functions execute on a staggered schedule every Monday morning. Each function reads from and writes to a single DynamoDB table using a composite key design that separates profiles, job listings, and state management.</p>
 
-      const filtered = (suggestions || []).filter(s =>
-        s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s)
-      );
+    <div class="stats-bar">
+      <div class="stat"><div class="num">30+</div><div class="label">Searches / Run</div></div>
+      <div class="stat"><div class="num">5</div><div class="label">Score Dimensions</div></div>
+      <div class="stat"><div class="num">45+</div><div class="label">Target Companies</div></div>
+      <div class="stat"><div class="num">~$0.003</div><div class="label">Cost / Listing</div></div>
+      <div class="stat"><div class="num">90 day</div><div class="label">TTL Expiry</div></div>
+    </div>
 
-      const addTag = (tag) => {
-        const trimmed = tag.trim();
-        if (trimmed && !tags.includes(trimmed)) setTags([...tags, trimmed]);
-        setInput("");
-        setShowSuggestions(false);
-      };
+    <h3>Pipeline Stages</h3>
+    <div class="arch-flow">
+      <div class="phase-label">Stage 1 — Scrape &amp; Filter</div>
+      <div class="arch-row">
+        <div class="arch-box box-trigger">⏰ EventBridge<div class="sub">cron schedule</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-compute">λ Scraper<div class="sub">Python 3.12</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-external">🔍 SerpAPI<div class="sub">Google Jobs engine</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-data">📦 DynamoDB<div class="sub">STATUS#new</div></div>
+      </div>
 
-      const removeTag = (idx) => setTags(tags.filter((_, i) => i !== idx));
+      <div class="phase-label">Stage 2 — AI Score</div>
+      <div class="arch-row">
+        <div class="arch-box box-trigger">⏰ EventBridge<div class="sub">+30 min offset</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-compute">λ Scorer<div class="sub">Python 3.12</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-external">🧠 Bedrock<div class="sub">Claude Sonnet</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-data">📦 DynamoDB<div class="sub">STATUS#scored</div></div>
+      </div>
 
-      return (
-        <div style={{ position: "relative" }}>
-          <div style={{
-            display: "flex", flexWrap: "wrap", gap: "6px", padding: "10px",
-            background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "8px",
-            minHeight: "44px", alignItems: "center"
-          }}>
-            {tags.map((tag, i) => (
-              <span key={i} style={{
-                background: "linear-gradient(135deg, #e94560, #c23152)",
-                color: "#fff", padding: "4px 10px", borderRadius: "14px",
-                fontSize: "13px", display: "flex", alignItems: "center", gap: "6px",
-                animation: "fadeIn 0.2s ease"
-              }}>
-                {tag}
-                <span onClick={() => removeTag(i)} style={{
-                  cursor: "pointer", opacity: 0.7, fontWeight: "bold", fontSize: "14px", lineHeight: 1
-                }}>×</span>
-              </span>
-            ))}
-            <input
-              value={input}
-              onChange={e => { setInput(e.target.value); setShowSuggestions(true); }}
-              onKeyDown={e => { if (e.key === "Enter" && input.trim()) { e.preventDefault(); addTag(input); }}}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              placeholder={tags.length === 0 ? placeholder : "Add more..."}
-              style={{
-                background: "transparent", border: "none", outline: "none",
-                color: "#e0e0e0", fontSize: "14px", fontFamily: "'DM Sans', sans-serif",
-                flex: 1, minWidth: "120px"
-              }}
-            />
-          </div>
-          {showSuggestions && input.length > 0 && filtered.length > 0 && (
-            <div style={{
-              position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
-              background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "8px",
-              marginTop: "4px", maxHeight: "180px", overflowY: "auto",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.4)"
-            }}>
-              {filtered.slice(0, 8).map((s, i) => (
-                <div key={i} onMouseDown={() => addTag(s)} style={{
-                  padding: "8px 14px", cursor: "pointer", fontSize: "13px",
-                  color: "#c0c0c0", borderBottom: "1px solid #2a2a4a"
-                }}
-                onMouseEnter={e => e.target.style.background = "#2a2a4a"}
-                onMouseLeave={e => e.target.style.background = "transparent"}
-                >{s}</div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
+      <div class="phase-label">Stage 3 — Notify</div>
+      <div class="arch-row">
+        <div class="arch-box box-trigger">⏰ EventBridge<div class="sub">+60 min offset</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-compute">λ Notifier<div class="sub">Python 3.12</div></div>
+        <span class="arrow">→</span>
+        <div class="arch-box box-notify">📧 SNS Digest<div class="sub">score ≥ 40</div></div>
+        <span class="arrow"> </span>
+        <div class="arch-box box-notify">🚨 SNS Alert<div class="sub">score ≥ 75</div></div>
+      </div>
 
-    function Toggle({ value, onChange, label }) {
-      return (
-        <label style={{
-          display: "flex", alignItems: "center", gap: "10px",
-          color: "#c0c0c0", fontSize: "14px", cursor: "pointer"
-        }}>
-          <div onClick={() => onChange(!value)} style={{
-            width: "40px", height: "22px", borderRadius: "11px",
-            background: value ? "linear-gradient(135deg, #e94560, #c23152)" : "#2a2a4a",
-            position: "relative", cursor: "pointer", transition: "background 0.2s", flexShrink: 0
-          }}>
-            <div style={{
-              width: "18px", height: "18px", borderRadius: "50%",
-              background: "#fff", position: "absolute", top: "2px",
-              left: value ? "20px" : "2px", transition: "left 0.2s",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.3)"
-            }} />
-          </div>
-          {label}
-        </label>
-      );
-    }
+      <div class="phase-label">Supporting Services</div>
+      <div class="arch-row">
+        <div class="arch-box box-data">🔑 Secrets Manager<div class="sub">API keys</div></div>
+        <span class="arrow"> </span>
+        <div class="arch-box box-data">📋 DynamoDB<div class="sub">user profiles</div></div>
+        <span class="arrow"> </span>
+        <div class="arch-box box-future">🌐 API Gateway<div class="sub">profile builder API</div></div>
+      </div>
+    </div>
 
-    function Section({ number, title, subtitle, children }) {
-      return (
-        <div style={{
-          background: "linear-gradient(145deg, #16162a, #1a1a32)",
-          border: "1px solid #2a2a4a", borderRadius: "12px",
-          padding: "24px", marginBottom: "16px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.2)"
-        }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "12px", marginBottom: "6px" }}>
-            <span style={{
-              background: "linear-gradient(135deg, #e94560, #c23152)",
-              color: "#fff", width: "28px", height: "28px", borderRadius: "50%",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontSize: "13px", fontWeight: "bold", flexShrink: 0
-            }}>{number}</span>
-            <h3 style={{
-              margin: 0, color: "#f0f0f0",
-              fontFamily: "'Playfair Display', serif", fontSize: "20px", fontWeight: 600
-            }}>{title}</h3>
-          </div>
-          {subtitle && <p style={{
-            margin: "0 0 16px 40px", color: "#888", fontSize: "13px"
-          }}>{subtitle}</p>}
-          <div>{children}</div>
-        </div>
-      );
-    }
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Trigger</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Compute</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div>Data</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>External</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Notification</div>
+      <div class="legend-item"><div class="legend-dot" style="border:1.5px dashed #555; background:transparent"></div>Planned</div>
+    </div>
+  </section>
 
-    function ProfileBuilder() {
-      const [name, setName] = useState("");
-      const [searchQueries, setSearchQueries] = useState([]);
-      const [locations, setLocations] = useState([]);
-      const [tier1Keywords, setTier1Keywords] = useState([]);
-      const [tier2Keywords, setTier2Keywords] = useState([]);
-      const [exclusions, setExclusions] = useState(["junior", "entry-level", "intern"]);
-      const [companies, setCompanies] = useState([]);
-      const [requireGeo, setRequireGeo] = useState(true);
-      const [active, setActive] = useState(true);
-      const [saved, setSaved] = useState(false);
-      const [loading, setLoading] = useState(false);
+  <!-- Scraper -->
+  <section>
+    <h2>Scraper — Data Collection &amp; Filtering</h2>
+    <p>The scraper loads active user profiles from DynamoDB, constructs search queries by combining job titles with target locations, and hits the SerpAPI Google Jobs engine. Each result passes through a multi-stage filtering pipeline before being written to the jobs table.</p>
 
-      const handleSave = () => {
-        if (!name.trim()) return;
-        setLoading(true);
-        const profile = {
-          name: name.toLowerCase().trim(),
-          search_queries: searchQueries,
-          search_locations: locations,
-          target_companies: companies,
-          tier1_keywords: tier1Keywords,
-          tier2_keywords: tier2Keywords,
-          exclusions,
-          require_geo_match: requireGeo,
-          active,
-          tier1_minimum: 1,
-        };
-        console.log("Profile payload:", JSON.stringify(profile, null, 2));
-        // TODO: POST to API Gateway endpoint
-        // fetch(API_URL + '/profile', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(profile) })
-        setTimeout(() => { setLoading(false); setSaved(true); setTimeout(() => setSaved(false), 3000); }, 800);
-      };
+    <h3>Filtering Pipeline</h3>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <h4>Deduplication</h4>
+        <p>SHA-256 hash of profile + title + company creates deterministic job IDs. Existing items are skipped via DynamoDB conditional writes.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Keyword Gating</h4>
+        <p>Two-tier keyword system: tier 1 keywords are required (must-have), tier 2 boost relevance. Configurable minimum threshold per profile.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Geographic Enforcement</h4>
+        <p>Hard geographic filter requires job locations to match profile geo_keywords (city names, neighborhoods, "remote"). Prevents results that name a city in the description but are actually located elsewhere.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Apply Link Extraction</h4>
+        <p>Captures apply_options array from SerpAPI — multiple job board links per listing. Stores primary apply_url, apply_source, and all alternatives for multi-source email rendering.</p>
+      </div>
+    </div>
+  </section>
 
-      const completeness = [
-        name.trim().length > 0,
-        searchQueries.length > 0,
-        locations.length > 0,
-        tier1Keywords.length > 0,
-      ].filter(Boolean).length;
+  <!-- Scorer -->
+  <section>
+    <h2>Scorer — Bedrock AI Relevance</h2>
+    <p>Each new listing is sent to Amazon Bedrock (Claude Sonnet) with the user's full profile context. The model returns a structured JSON response with five weighted dimension scores and a natural language reasoning summary.</p>
 
-      return (
-        <div style={{
-          minHeight: "100vh",
-          background: "linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%)"
-        }}>
-          {/* Header */}
-          <div style={{
-            background: "linear-gradient(135deg, #0f0f1a 0%, #1a0a1a 100%)",
-            borderBottom: "1px solid #2a2a4a",
-            padding: "32px 24px 28px", textAlign: "center",
-            position: "sticky", top: 0, zIndex: 100
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "6px" }}>
-              <span style={{ fontSize: "24px" }}>🚀</span>
-              <h1 style={{
-                margin: 0, color: "#f0f0f0",
-                fontFamily: "'Playfair Display', serif",
-                fontSize: "28px", fontWeight: 700, letterSpacing: "-0.5px"
-              }}>Job Agent Profile Builder</h1>
-            </div>
-            <p style={{ margin: 0, color: "#888", fontSize: "14px" }}>
-              Tell us what you're looking for and we'll find it for you
-            </p>
-            <div style={{
-              maxWidth: "400px", margin: "16px auto 0",
-              display: "flex", gap: "4px", alignItems: "center"
-            }}>
-              {[...Array(4)].map((_, i) => (
-                <div key={i} style={{
-                  flex: 1, height: "3px", borderRadius: "2px",
-                  background: i < completeness ? "linear-gradient(90deg, #e94560, #c23152)" : "#2a2a4a",
-                  transition: "background 0.3s"
-                }} />
-              ))}
-              <span style={{ fontSize: "11px", color: "#888", marginLeft: "8px" }}>{completeness}/4</span>
-            </div>
-          </div>
+    <h3>5-Dimension Weighted Score</h3>
+    <div class="score-grid">
+      <div class="score-card"><div class="score-weight">30%</div><div class="score-label">Role Fit</div></div>
+      <div class="score-card"><div class="score-weight">25%</div><div class="score-label">GenAI Relevance</div></div>
+      <div class="score-card"><div class="score-weight">20%</div><div class="score-label">Seniority Match</div></div>
+      <div class="score-card"><div class="score-weight">15%</div><div class="score-label">Industry Match</div></div>
+      <div class="score-card"><div class="score-weight">10%</div><div class="score-label">Geographic Match</div></div>
+    </div>
 
-          {/* Form */}
-          <div style={{ maxWidth: "640px", margin: "0 auto", padding: "24px 16px 120px" }}>
+    <h3>Prompt Engineering</h3>
+    <div class="prompt-features">
+      <div class="prompt-feat">
+        <div class="feat-label">Few-Shot Examples</div>
+        Three reference examples (high / medium / low match) give the model calibration anchors for consistent scoring across runs.
+      </div>
+      <div class="prompt-feat">
+        <div class="feat-label">Structured Output</div>
+        JSON schema enforcement with fallback parsing — strips markdown fences and handles malformed responses gracefully.
+      </div>
+      <div class="prompt-feat">
+        <div class="feat-label">Profile Injection</div>
+        Full user profile (keywords, companies, locations, exclusions) is injected as context so scoring is personalized per user.
+      </div>
+      <div class="prompt-feat">
+        <div class="feat-label">Throttle &amp; Cost Tracking</div>
+        5-second delays between API calls prevent rate limiting. Per-run cost tracking logs actual Bedrock spend.
+      </div>
+    </div>
+  </section>
 
-            <Section number="1" title="Who are you?" subtitle="Your first name — this becomes your unique profile">
-              <input
-                value={name} onChange={e => setName(e.target.value)}
-                placeholder="Your first name"
-                style={{
-                  width: "100%", padding: "12px 14px",
-                  background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "8px",
-                  color: "#e0e0e0", fontSize: "16px", fontFamily: "'DM Sans', sans-serif", outline: "none"
-                }}
-              />
-            </Section>
+  <!-- Notifier -->
+  <section>
+    <h2>Notifier — Email Delivery</h2>
+    <p>Two notification channels via SNS: a weekly digest for all listings scoring 40+ and individual hot-match alerts for listings scoring 75+. Each email includes the AI reasoning summary, dimension breakdown, and clickable apply links from multiple job boards.</p>
 
-            <Section number="2" title="What roles are you looking for?" subtitle="Job titles you'd search for — type and press Enter">
-              <TagInput
-                tags={searchQueries} setTags={setSearchQueries}
-                placeholder='e.g. "museum curator", "research assistant"'
-                suggestions={SUGGESTED_ROLES}
-              />
-            </Section>
+    <h3>Sample Email Output</h3>
+    <div class="notif-sample">
+      <span class="hl">Security Architect - GenAI Platform</span><br>
+      Citadel Securities · Miami, FL<br>
+      <span class="score-hl">Score: 82/100</span> | Role: 28/30 · GenAI: 22/25 · Seniority: 18/20 · Industry: 10/15 · Geo: 4/10<br>
+      <br>
+      <em>"Strong match — role directly involves securing GenAI model deployments<br>
+      in a financial services environment with senior-level scope..."</em><br>
+      <br>
+      ➤ Apply on <span class="link-hl">Indeed</span><br>
+      &nbsp;&nbsp;Also on: <span class="link-hl">LinkedIn</span> · <span class="link-hl">Glassdoor</span> · <span class="link-hl">Company Site</span>
+    </div>
+    <p>Listings transition through three DynamoDB status states — <code style="color:var(--blue);font-family:var(--mono);font-size:13px">STATUS#new</code> → <code style="color:var(--blue);font-family:var(--mono);font-size:13px">STATUS#scored</code> → <code style="color:var(--blue);font-family:var(--mono);font-size:13px">STATUS#notified</code> — ensuring no listing is processed or emailed twice.</p>
+  </section>
 
-            <Section number="3" title="Where do you want to work?" subtitle="Cities, states, or Remote">
-              <TagInput
-                tags={locations} setTags={setLocations}
-                placeholder="Type a city or pick from suggestions..."
-                suggestions={PRESET_LOCATIONS}
-              />
-            </Section>
+  <!-- Data Model -->
+  <section>
+    <h2>DynamoDB — Single-Table Design</h2>
+    <p>All data lives in one DynamoDB table using a composite primary key (PK + SK) pattern. This eliminates cross-table queries and keeps the architecture simple while supporting multiple entity types.</p>
 
-            <Section number="4" title="Must-have keywords" subtitle="Words that MUST appear in the job posting">
-              <TagInput
-                tags={tier1Keywords} setTags={setTier1Keywords}
-                placeholder='e.g. "history", "research", "coordinator"'
-              />
-            </Section>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <h4>User Profiles</h4>
+        <p>PK: PROFILE#{name} / SK: CONFIG — Contains search queries, locations, keywords (tier 1 + 2), target companies, exclusions, geographic filters, and notification preferences.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Job Listings</h4>
+        <p>PK: JOB#{hash} / SK: STATUS#{state} — Stores title, company, location, description, apply links, score breakdown, AI reasoning, and timestamps. 90-day TTL auto-expires old data.</p>
+      </div>
+      <div class="tech-card">
+        <h4>GSI: StatusIndex</h4>
+        <p>Global secondary index on status + timestamp enables efficient queries for "all new listings" or "all scored listings" without full table scans.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Conditional Writes</h4>
+        <p>DynamoDB condition expressions prevent duplicate inserts. The scraper attempts a write and silently skips if the job already exists — no race conditions.</p>
+      </div>
+    </div>
+  </section>
 
-            <Section number="5" title="Nice-to-have keywords" subtitle="Bonus terms that boost a job's relevance score">
-              <TagInput
-                tags={tier2Keywords} setTags={setTier2Keywords}
-                placeholder='e.g. "museum", "archives", "nonprofit"'
-              />
-            </Section>
+  <!-- Target Coverage -->
+  <section>
+    <h2>Target Company Coverage</h2>
+    <p>Profiles can define target companies that boost relevance scoring when matched. The system tracks three major industry clusters across Florida's emerging tech corridor.</p>
 
-            <Section number="6" title="Exclude these" subtitle="Filter out jobs containing these terms">
-              <TagInput
-                tags={exclusions} setTags={setExclusions}
-                placeholder='e.g. "senior", "director", "10 years"'
-              />
-            </Section>
+    <div class="company-section">
+      <div class="company-category">Wall Street South — Financial Services (Miami / West Palm Beach)</div>
+      <div class="company-tags">
+        <span class="company-tag finance">Elliott Management</span>
+        <span class="company-tag finance">Point72</span>
+        <span class="company-tag finance">Apollo Global</span>
+        <span class="company-tag finance">Citadel</span>
+        <span class="company-tag finance">Thoma Bravo</span>
+        <span class="company-tag finance">Millennium</span>
+        <span class="company-tag finance">Balyasny</span>
+        <span class="company-tag finance">Blackstone</span>
+        <span class="company-tag finance">Starwood Capital</span>
+        <span class="company-tag finance">Ark Invest</span>
+        <span class="company-tag finance">D1 Capital</span>
+        <span class="company-tag finance">Schonfeld</span>
+      </div>
 
-            <Section number="7" title="Dream companies" subtitle="Optional — any specific companies you'd love to work at?">
-              <TagInput
-                tags={companies} setTags={setCompanies}
-                placeholder='e.g. "Smithsonian", "National Geographic" (leave blank to search all)'
-              />
-            </Section>
+      <div class="company-category">Space Coast — Aerospace &amp; Defense</div>
+      <div class="company-tags">
+        <span class="company-tag aerospace">SpaceX</span>
+        <span class="company-tag aerospace">Blue Origin</span>
+        <span class="company-tag aerospace">United Launch Alliance</span>
+        <span class="company-tag aerospace">Sierra Space</span>
+        <span class="company-tag aerospace">L3Harris</span>
+        <span class="company-tag aerospace">Collins Aerospace</span>
+        <span class="company-tag aerospace">Relativity Space</span>
+        <span class="company-tag aerospace">Leonardo DRS</span>
+        <span class="company-tag aerospace">Firefly Aerospace</span>
+        <span class="company-tag aerospace">Rocket Lab</span>
+      </div>
 
-            <Section number="8" title="Settings">
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <Toggle value={requireGeo} onChange={setRequireGeo} label="Only show jobs in my selected locations" />
-                <Toggle value={active} onChange={setActive} label="Activate profile (start searching immediately)" />
-              </div>
-            </Section>
+      <div class="company-category">Cybersecurity</div>
+      <div class="company-tags">
+        <span class="company-tag cyber">CrowdStrike</span>
+        <span class="company-tag cyber">Palo Alto Networks</span>
+        <span class="company-tag cyber">Fortinet</span>
+        <span class="company-tag cyber">Zscaler</span>
+        <span class="company-tag cyber">SentinelOne</span>
+        <span class="company-tag cyber">Wiz</span>
+        <span class="company-tag cyber">Snyk</span>
+        <span class="company-tag cyber">Varonis</span>
+        <span class="company-tag cyber">Palantir</span>
+      </div>
+    </div>
+  </section>
 
-            {/* Preview */}
-            {completeness >= 3 && (
-              <div style={{
-                background: "#1a1a2e", border: "1px solid #2a2a4a", borderRadius: "12px",
-                padding: "20px", marginBottom: "16px"
-              }}>
-                <h4 style={{ color: "#e94560", fontFamily: "'Playfair Display', serif", margin: "0 0 12px", fontSize: "16px" }}>
-                  📋 Profile Preview
-                </h4>
-                <div style={{ color: "#aaa", fontSize: "13px", lineHeight: 1.8 }}>
-                  <div><strong style={{ color: "#ddd" }}>Profile:</strong> {name}</div>
-                  <div><strong style={{ color: "#ddd" }}>Searching for:</strong> {searchQueries.join(", ") || "—"}</div>
-                  <div><strong style={{ color: "#ddd" }}>In:</strong> {locations.join(", ") || "—"}</div>
-                  <div><strong style={{ color: "#ddd" }}>Must match:</strong> {tier1Keywords.join(", ") || "—"}</div>
-                  <div><strong style={{ color: "#ddd" }}>Bonus terms:</strong> {tier2Keywords.join(", ") || "—"}</div>
-                  <div><strong style={{ color: "#ddd" }}>Excluding:</strong> {exclusions.join(", ") || "—"}</div>
-                  {companies.length > 0 && <div><strong style={{ color: "#ddd" }}>Target companies:</strong> {companies.join(", ")}</div>}
-                  <div><strong style={{ color: "#ddd" }}>Geo-locked:</strong> {requireGeo ? "Yes" : "No"} | <strong style={{ color: "#ddd" }}>Active:</strong> {active ? "Yes" : "No"}</div>
-                </div>
-              </div>
-            )}
-          </div>
+  <!-- Design Decisions -->
+  <section>
+    <h2>Design Decisions</h2>
+    <p>Key architectural tradeoffs and lessons from building and operating the system.</p>
 
-          {/* Sticky save bar */}
-          <div style={{
-            position: "fixed", bottom: 0, left: 0, right: 0,
-            background: "linear-gradient(180deg, transparent, #0f0f1a 30%)",
-            padding: "24px", display: "flex", justifyContent: "center"
-          }}>
-            <button onClick={handleSave} disabled={completeness < 3 || loading} style={{
-              background: completeness >= 3 ? "linear-gradient(135deg, #e94560, #c23152)" : "#2a2a4a",
-              color: completeness >= 3 ? "#fff" : "#666",
-              border: "none", borderRadius: "12px",
-              padding: "14px 48px", fontSize: "16px", fontWeight: 600,
-              fontFamily: "'DM Sans', sans-serif",
-              cursor: completeness >= 3 ? "pointer" : "not-allowed",
-              transition: "all 0.2s",
-              boxShadow: completeness >= 3 ? "0 4px 20px rgba(233,69,96,0.3)" : "none",
-              minWidth: "200px"
-            }}>
-              {loading ? "Saving..." : saved ? "✓ Profile Saved!" : "Save Profile"}
-            </button>
-          </div>
-        </div>
-      );
-    }
+    <div class="decision-grid">
+      <div class="decision-card">
+        <div class="challenge">Problem</div>
+        <h4>AI Scoring vs. Keyword Filtering</h4>
+        <p>Strict keyword filtering missed relevant roles that used different terminology. Solution: lower the keyword gate, widen the search aperture, and let Bedrock handle nuanced relevance. The AI catches semantic matches that regex can't.</p>
+      </div>
+      <div class="decision-card">
+        <div class="challenge">Problem</div>
+        <h4>Geographic False Positives</h4>
+        <p>Searching "security architect Miami" returned jobs in other states that mentioned Miami in their description. Solution: hard filter on the job location field itself, requiring explicit city names or "remote" indicators.</p>
+      </div>
+      <div class="decision-card">
+        <div class="challenge">Problem</div>
+        <h4>Apply Link Fragmentation</h4>
+        <p>Listings appear on multiple boards with different apply URLs. Solution: extract the full apply_options array, store all sources, and render primary + alternatives in notifications so users can pick their preferred board.</p>
+      </div>
+      <div class="decision-card">
+        <div class="challenge">Problem</div>
+        <h4>Cost Control at Scale</h4>
+        <p>Bedrock calls could get expensive with hundreds of listings. Solution: filter aggressively before scoring (dedup → keywords → geography), throttle API calls, and track per-run costs. Current: ~$0.003/listing.</p>
+      </div>
+    </div>
+  </section>
 
-    ReactDOM.render(<ProfileBuilder />, document.getElementById("root"));
-  </script>
+  <!-- Tech Stack -->
+  <section>
+    <h2>Tech Stack</h2>
+
+    <div class="tech-grid">
+      <div class="tech-card">
+        <h4>Infrastructure as Code</h4>
+        <p>AWS SAM template.yaml defines all resources — Lambda, DynamoDB, SNS, EventBridge, IAM, and Secrets Manager references. Single <code style="font-family:var(--mono)">sam deploy</code> for the full stack.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Compute</h4>
+        <p>Three Python 3.12 Lambda functions with 256MB memory and 5-minute timeouts. Each function has single-purpose scope with least-privilege IAM roles.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Storage</h4>
+        <p>DynamoDB on-demand capacity, single-table design with GSI for status queries, TTL for automatic 90-day expiry, and conditional writes for idempotency.</p>
+      </div>
+      <div class="tech-card">
+        <h4>AI / ML</h4>
+        <p>Amazon Bedrock invoking Claude Sonnet with structured JSON prompts, few-shot calibration examples, and per-profile context injection. Fallback parsing for malformed responses.</p>
+      </div>
+      <div class="tech-card">
+        <h4>Notifications</h4>
+        <p>Two SNS topics — digest (weekly, score ≥ 40) and alerts (immediate, score ≥ 75). HTML emails with score breakdowns and clickable multi-source apply links.</p>
+      </div>
+      <div class="tech-card">
+        <h4>External Data</h4>
+        <p>SerpAPI Google Jobs engine provides structured job data including titles, companies, locations, descriptions, and apply_options. API key stored in Secrets Manager.</p>
+      </div>
+    </div>
+
+    <div class="cost-bar">
+      <div class="cost-amount">&lt; $5<span style="font-size:16px;font-weight:400;color:var(--text-dim)">/mo</span></div>
+      <div class="cost-detail">
+        <strong style="color:var(--text-bright)">Total estimated monthly cost</strong><br>
+        DynamoDB on-demand + Lambda invocations + Bedrock scoring + SerpAPI calls + SNS delivery
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section>
+    <h2>About</h2>
+    <div class="about-card">
+      <p>Built by a security architect with 30 years of cybersecurity experience, currently specializing in generative AI application security and production approval in financial services. AWS Solutions Architecture certified.</p>
+      <p>This agent was designed to solve a real problem — monitoring a fragmented job market across Florida's emerging tech corridor, from Miami's "Wall Street South" financial hub through the Space Coast aerospace cluster — while demonstrating hands-on Bedrock experience with security-first serverless architecture.</p>
+      <p>The design prioritizes operational simplicity (fully serverless, single-table DynamoDB, SAM-managed infrastructure), cost efficiency (under $5/month for continuous weekly monitoring), and extensibility (multi-user profiles with a self-service web app in development).</p>
+    </div>
+    <div class="hero-meta" style="margin-top:20px">
+      <div class="meta-item"><span>→</span> GenAI Security</div>
+      <div class="meta-item"><span>→</span> AWS Certified SA</div>
+      <div class="meta-item"><span>→</span> Financial Services</div>
+      <div class="meta-item"><span>→</span> 30yr Cybersecurity</div>
+    </div>
+  </section>
+
+  <div class="footer">
+    <p>Built with AWS SAM · Lambda · DynamoDB · Bedrock · Python 3.12</p>
+    <p style="margin-top:8px"><a href="https://github.com/falcon9heavy/genai-job-agent">View Source on GitHub</a></p>
+  </div>
+
+</div>
+
 </body>
 </html>
