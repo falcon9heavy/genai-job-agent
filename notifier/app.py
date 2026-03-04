@@ -4,11 +4,10 @@ import boto3
 from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb')
-sns = boto3.client('sns')
+ses = boto3.client('ses')
 
 TABLE_NAME = os.environ.get('JOBS_TABLE', 'genai-job-agent-listings')
-DIGEST_TOPIC = os.environ.get('DIGEST_TOPIC', '')
-ALERT_TOPIC = os.environ.get('ALERT_TOPIC', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'chrisadams27@gmail.com')
 
 ALERT_THRESHOLD = 75
 DIGEST_THRESHOLD = 40
@@ -16,7 +15,17 @@ DIGEST_THRESHOLD = 40
 table = dynamodb.Table(TABLE_NAME)
 
 
+def get_active_profiles():
+    """Get all active profiles with email addresses."""
+    response = table.scan(
+        FilterExpression='SK = :sk AND active = :a',
+        ExpressionAttributeValues={':sk': 'CONFIG', ':a': True}
+    )
+    return response['Items']
+
+
 def get_scored_listings():
+    """Get all scored listings waiting for notification."""
     response = table.query(
         IndexName='GSI1',
         KeyConditionExpression='GSI1PK = :status',
@@ -25,12 +34,13 @@ def get_scored_listings():
     return response['Items']
 
 
-def format_apply_links(listing):
-    """Format apply links for display in email.
+def get_listings_for_profile(listings, profile_name):
+    """Filter listings that belong to a specific profile."""
+    return [l for l in listings if l.get('profile') == profile_name]
 
-    Shows the primary apply link prominently, then lists any
-    additional apply options (e.g. LinkedIn, Indeed, Dice).
-    """
+
+def format_apply_links(listing):
+    """Format apply links for display in email."""
     apply_url = listing.get('apply_url', '')
     apply_source = listing.get('apply_source', '')
     apply_options = listing.get('apply_options', [])
@@ -41,7 +51,6 @@ def format_apply_links(listing):
         label = f"Apply on {apply_source}" if apply_source else "Apply"
         lines.append(f"    ➤ {label}: {apply_url}")
 
-        # Show additional apply options if available
         if len(apply_options) > 1:
             lines.append(f"    Also on:")
             for opt in apply_options[1:]:
@@ -50,7 +59,6 @@ def format_apply_links(listing):
                 if url:
                     lines.append(f"      • {source}: {url}")
     else:
-        # Fallback to old 'url' field for listings scraped before this update
         url = listing.get('url', '')
         if url:
             lines.append(f"    ➤ View: {url}")
@@ -59,6 +67,7 @@ def format_apply_links(listing):
 
 
 def format_listing(listing):
+    """Format a single listing for the digest email."""
     score = listing.get('bedrock_score', 0)
     title = listing.get('title', 'Unknown')
     company = listing.get('company', 'Unknown')
@@ -77,7 +86,6 @@ def format_listing(listing):
 
     lines.append(f"    Summary:   {summary}")
 
-    # Apply links section
     apply_links = format_apply_links(listing)
     if apply_links:
         lines.append(apply_links)
@@ -88,20 +96,39 @@ def format_listing(listing):
     return "\n".join(lines)
 
 
-def send_digest(listings):
+def send_email(to_email, subject, body):
+    """Send an email via SES."""
+    try:
+        ses.send_email(
+            Source=SENDER_EMAIL,
+            Destination={'ToAddresses': [to_email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {'Text': {'Data': body, 'Charset': 'UTF-8'}}
+            }
+        )
+        print(f"  Email sent to {to_email}: {subject}")
+        return True
+    except Exception as e:
+        print(f"  ERROR sending to {to_email}: {e}")
+        return False
+
+
+def send_digest(profile_name, to_email, listings):
+    """Send a digest email for a specific profile."""
     if not listings:
-        print("No listings above digest threshold")
+        print(f"  [{profile_name}] No listings to digest")
         return False
 
     sorted_listings = sorted(listings, key=lambda x: x.get('bedrock_score', 0), reverse=True)
     above_threshold = [l for l in sorted_listings if l.get('bedrock_score', 0) >= DIGEST_THRESHOLD]
 
     if not above_threshold:
-        print(f"No listings above digest threshold ({DIGEST_THRESHOLD})")
+        print(f"  [{profile_name}] No listings above digest threshold ({DIGEST_THRESHOLD})")
         return False
 
     now = datetime.now().strftime('%B %d, %Y')
-    header = f"GenAI Job Agent - Weekly Digest\n{now}\n{'=' * 50}\n\n"
+    header = f"Job Agent - Weekly Digest for {profile_name.title()}\n{now}\n{'=' * 50}\n\n"
     header += f"Total scored: {len(listings)} | Above threshold ({DIGEST_THRESHOLD}+): {len(above_threshold)}\n"
 
     high = [l for l in above_threshold if l.get('bedrock_score', 0) >= ALERT_THRESHOLD]
@@ -117,20 +144,16 @@ def send_digest(listings):
     body += "-" * 50 + "\n"
     body += "GenAI Job Search Agent | github.com/falcon9heavy/genai-job-agent\n"
 
-    sns.publish(
-        TopicArn=DIGEST_TOPIC,
-        Subject=f"Job Agent Digest: {len(above_threshold)} matches ({len(high)} hot)",
-        Message=body
-    )
-    print(f"Digest sent: {len(above_threshold)} listings")
-    return True
+    subject = f"Job Agent Digest ({profile_name.title()}): {len(above_threshold)} matches ({len(high)} hot)"
+    return send_email(to_email, subject, body)
 
 
-def send_alerts(listings):
+def send_alerts(profile_name, to_email, listings):
+    """Send individual hot-match alert emails for a specific profile."""
     high = [l for l in listings if l.get('bedrock_score', 0) >= ALERT_THRESHOLD]
 
     if not high:
-        print(f"No high-priority listings (threshold: {ALERT_THRESHOLD})")
+        print(f"  [{profile_name}] No high-priority listings (threshold: {ALERT_THRESHOLD})")
         return 0
 
     sorted_high = sorted(high, key=lambda x: x.get('bedrock_score', 0), reverse=True)
@@ -147,14 +170,12 @@ def send_alerts(listings):
         message = f"🔥 HOT MATCH ({score}/100): {title} at {company}"
         if location:
             message += f" [{location}]"
-
         message += "\n"
 
         if apply_url:
             label = f"Apply on {apply_source}" if apply_source else "Apply"
             message += f"\n➤ {label}: {apply_url}"
 
-            # Include additional apply options
             apply_options = listing.get('apply_options', [])
             if len(apply_options) > 1:
                 message += "\n\nAlso available on:"
@@ -168,18 +189,16 @@ def send_alerts(listings):
         if summary:
             message += f"\n\nSummary: {summary}"
 
-        sns.publish(
-            TopicArn=ALERT_TOPIC,
-            Subject=f"🔥 Job Alert: {title} ({score}/100)",
-            Message=message
-        )
-        count += 1
+        subject = f"🔥 Job Alert ({profile_name.title()}): {title} ({score}/100)"
+        if send_email(to_email, subject, message):
+            count += 1
 
-    print(f"Alerts sent: {count}")
+    print(f"  [{profile_name}] Alerts sent: {count}")
     return count
 
 
 def update_notified(listings):
+    """Mark listings as notified."""
     for listing in listings:
         table.update_item(
             Key={'PK': listing['PK'], 'SK': listing['SK']},
@@ -192,17 +211,50 @@ def update_notified(listings):
 
 
 def lambda_handler(event, context):
+    profiles = get_active_profiles()
     listings = get_scored_listings()
-    stats = {'total': len(listings), 'digest_sent': False, 'alerts': 0}
+
+    stats = {
+        'total_listings': len(listings),
+        'profiles_processed': 0,
+        'profile_stats': {}
+    }
 
     if not listings:
         print("No scored listings to notify")
         return {'statusCode': 200, 'body': json.dumps(stats)}
 
-    stats['digest_sent'] = send_digest(listings)
-    stats['alerts'] = send_alerts(listings)
+    if not profiles:
+        print("No active profiles found")
+        return {'statusCode': 200, 'body': json.dumps(stats)}
 
+    for profile in profiles:
+        name = profile.get('name', 'unknown')
+        email = profile.get('email', '')
+
+        if not email:
+            print(f"[{name}] No email configured, skipping notifications")
+            continue
+
+        profile_listings = get_listings_for_profile(listings, name)
+        print(f"\n=== Profile: {name} ({email}) - {len(profile_listings)} listings ===")
+
+        p_stats = {
+            'email': email,
+            'total': len(profile_listings),
+            'digest_sent': False,
+            'alerts': 0
+        }
+
+        if profile_listings:
+            p_stats['digest_sent'] = send_digest(name, email, profile_listings)
+            p_stats['alerts'] = send_alerts(name, email, profile_listings)
+
+        stats['profile_stats'][name] = p_stats
+        stats['profiles_processed'] += 1
+
+    # Mark all listings as notified
     update_notified(listings)
 
-    print(f"\nResults: {stats}")
+    print(f"\nResults: {json.dumps(stats, indent=2)}")
     return {'statusCode': 200, 'body': json.dumps(stats)}

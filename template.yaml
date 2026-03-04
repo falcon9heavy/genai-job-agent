@@ -83,15 +83,16 @@ Resources:
       Environment:
         Variables:
           JOBS_TABLE: !Ref JobsTable
-          DIGEST_TOPIC: !Ref DigestTopic
-          ALERT_TOPIC: !Ref AlertTopic
+          SENDER_EMAIL: chrisadams27@gmail.com
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref JobsTable
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt DigestTopic.TopicName
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt AlertTopic.TopicName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: '*'
       Events:
         NotifierSchedule:
           Type: Schedule
