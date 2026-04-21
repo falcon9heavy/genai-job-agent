@@ -10,7 +10,7 @@ bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 TABLE_NAME = os.environ.get('JOBS_TABLE', 'genai-job-agent-listings')
 table = dynamodb.Table(TABLE_NAME)
 
-MODEL_ID = 'us.anthropic.claude-sonnet-4-20250514-v1:0'
+MODEL_ID = 'us.anthropic.claude-sonnet-4-6'
 MAX_SCORES_PER_RUN = 100
 
 
