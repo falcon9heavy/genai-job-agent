@@ -56,9 +56,30 @@ profiles = [
             'Comcast', 'Susquehanna International Group',
             'Vertex Inc', 'SEI Investments', 'Bentley Systems',
             'InvisALERT Solutions',
-            # Miami / South FL
+            # Wall Street South / Miami Hedge Funds & Finance
+            'Citadel Securities', 'Point72', 'Millennium',
+            'Schonfeld', 'Balyasny', 'ExodusPoint',
+            'Verition', 'Walleye', 'Thoma Bravo',
+            'Starwood Capital', 'CI Financial',
+            'Blackstone', 'Elliott Management',
+            # South FL Tech / FinTech / Consumer
             'Magic Leap', 'Chewy', 'Citrix',
             'World Fuel Services', 'Kaseya',
+            'aXpire', 'Mastercard Miami',
+            'Watsco', 'NextEra Energy',
+            'Royal Caribbean', 'Carnival Corporation',
+            'Ultimate Software', 'Perk',
+            # Florida FinTech / Tech
+            'AgileEngine', 'Canoe Intelligence', 'Narmi',
+            'Flywire', 'AppZen', 'Alloy',
+            'Robosoft Technologies', 'CEX.IO',
+            'Grifin', 'AIO Logic', 'Sentora',
+            'Bookit', 'Network Capital',
+            'MetLife Florida', 'New York Life Florida',
+            'Coupa', 'Inspira Financial',
+            # Tampa / Orlando Tech
+            'ConnectWise', 'ReliaQuest', 'KnowBe4',
+            'Citigroup Tampa', 'USAA Tampa', 'JPMorgan Tampa',
             # São Paulo / Brazil
             'Nubank', 'iFood', 'PagSeguro', 'Stone',
             'Mercado Libre', 'VTEX', 'Loft',
@@ -68,6 +89,8 @@ profiles = [
             'New York, NY',
             'Philadelphia, PA',
             'Miami, FL',
+            'Fort Lauderdale, FL',
+            'Tampa, FL',
             'São Paulo, Brazil',
             'Remote',
         ],
@@ -96,10 +119,19 @@ profiles = [
             'philadelphia', 'philly', 'west chester', 'king of prussia',
             'conshohocken', 'blue bell', 'malvern',
             'chester county', 'montgomery county',
-            # Miami / South Florida
-            'miami', 'fort lauderdale', 'boca raton',
-            'west palm beach', 'doral', 'coral gables',
-            'south florida',
+            # Miami / South Florida / Wall Street South
+            'miami', 'brickell', 'coral gables', 'coconut grove',
+            'doral', 'aventura', 'key biscayne',
+            'miami beach', 'south beach', 'wynwood',
+            'fort lauderdale', 'hollywood, fl', 'plantation',
+            'boca raton', 'delray beach', 'boynton beach',
+            'west palm beach', 'palm beach gardens', 'jupiter',
+            'south florida', 'broward county', 'palm beach county',
+            'miami-dade',
+            # Tampa / Orlando / Central FL
+            'tampa', 'st. petersburg', 'clearwater',
+            'orlando', 'lake mary', 'winter park',
+            'jacksonville',
             # São Paulo
             'são paulo', 'sao paulo', 'sp', 'brasil', 'brazil',
             'faria lima', 'pinheiros', 'vila olímpia',
