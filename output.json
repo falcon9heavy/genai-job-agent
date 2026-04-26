@@ -1,1 +1,1 @@
-{"statusCode": 200, "body": "{\"total_listings\": 79, \"profiles_processed\": 1, \"profile_stats\": {\"madison\": {\"email\": \"madison.k.adams@gmail.com\", \"total\": 79, \"digest_sent\": true, \"alerts\": 1}}}"}
+{"statusCode": 200, "body": "{\"total_listings\": 156, \"profiles_processed\": 1, \"profile_stats\": {\"madison\": {\"email\": \"madison.k.adams@gmail.com\", \"total\": 156, \"digest_sent\": true, \"alerts\": 7}}}"}

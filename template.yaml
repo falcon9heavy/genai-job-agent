@@ -25,6 +25,7 @@ Resources:
       CodeUri: scraper/
       Handler: app.lambda_handler
       MemorySize: 256
+      Timeout: 600
       Environment:
         Variables:
           JOBS_TABLE: !Ref JobsTable
@@ -51,7 +52,7 @@ Resources:
       CodeUri: scorer/
       Handler: app.lambda_handler
       MemorySize: 256
-      Timeout: 300
+      Timeout: 600
       Environment:
         Variables:
           JOBS_TABLE: !Ref JobsTable
